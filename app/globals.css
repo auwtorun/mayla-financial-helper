@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+/* ============================================================
+   MAYLA — Dark Fintech Design Tokens
+   ============================================================ */
+
+:root {
+  /* Background layers */
+  --bg-base: #080c14;
+  --bg-surface: #0e1420;
+  --bg-elevated: #141b2d;
+  --bg-card: #111827;
+  --bg-muted: #1a2235;
+
+  /* Brand accent — electric teal/green like GoPay */
+  --accent: #00d4aa;
+  --accent-dim: #00b891;
+  --accent-glow: rgba(0, 212, 170, 0.15);
+  --accent-muted: rgba(0, 212, 170, 0.08);
+
+  /* Text */
+  --text-primary: #f0f4ff;
+  --text-secondary: #8a9bbf;
+  --text-muted: #4d5e7a;
+
+  /* Semantic colors */
+  --income: #22c55e;
+  --income-bg: rgba(34, 197, 94, 0.1);
+  --expense: #f43f5e;
+  --expense-bg: rgba(244, 63, 94, 0.1);
+  --transfer: #818cf8;
+  --transfer-bg: rgba(129, 140, 248, 0.1);
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Bottom nav height — used as padding offset */
+  --nav-height: 72px;
+}
+
+/* ── BASE ──────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--bg-base);
+  overscroll-behavior: none;
+}
+
+/* Prevent content from going under the bottom nav */
+main {
+  padding-bottom: calc(var(--nav-height) + 16px);
+}
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+}
+
+/* ── UTILITY CLASSES ───────────────────────────────────────── */
+
+.text-income { color: var(--income); }
+.text-expense { color: var(--expense); }
+.text-transfer { color: var(--transfer); }
+
+.bg-income-soft { background-color: var(--income-bg); }
+.bg-expense-soft { background-color: var(--expense-bg); }
+.bg-transfer-soft { background-color: var(--transfer-bg); }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+/* Accent glow ring — for FAB and primary CTAs */
+.glow-ring {
+  box-shadow:
+    0 0 0 0 transparent,
+    0 4px 24px rgba(0, 212, 170, 0.35);
+}
+
+/* ── ANIMATIONS ────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-in {
+  animation: fadeInUp 0.2s ease both;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 25%,
+    var(--bg-muted) 50%,
+    var(--bg-elevated) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ── FORM RESET ─────────────────────────────────────────────── */
+
+input,
+select,
+textarea {
+  background: var(--bg-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Native select arrow fix on dark bg */
+select {
+  appearance: none;
+}
+
+/* ── BUTTON BASE ────────────────────────────────────────────── */
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+button:active {
+  transform: scale(0.97);
+  transition: transform 0.08s;
+}
