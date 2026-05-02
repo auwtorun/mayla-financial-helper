@@ -15,7 +15,10 @@ import {
   getTodayISO,
   validateTransaction,
 } from "@/lib/utils/calculations";
-import type { Account, Category, Transaction, TransactionType } from "@/types";
+import { Modal, useConfirmModal, useModal } from "@/components/ui/Modal";
+import { SingleDatePicker } from "@/components/ui/DatePicker";
+import { useToast } from "@/components/ui/Toast";
+import type { Account, Category, TransactionType } from "@/types";
 
 // ── STYLES ───────────────────────────────────────────────────
 
@@ -43,7 +46,7 @@ const labelStyle: React.CSSProperties = {
   color: "var(--text-muted)",
   fontWeight: 600,
   letterSpacing: "0.06em",
-  textTransform: "uppercase",
+  textTransform: "uppercase" as const,
   marginBottom: 6,
 };
 
@@ -95,15 +98,36 @@ function TypeTabs({
   );
 }
 
-// ── MAIN FORM ────────────────────────────────────────────────
+// ── FIELD WRAPPER ────────────────────────────────────────────
 
-interface TransactionFormProps {
-  editId?: string;
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={labelStyle}>{label}</label>
+      {children}
+      {error && (
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
-export function TransactionForm({ editId }: TransactionFormProps) {
+// ── MAIN FORM ────────────────────────────────────────────────
+
+export function TransactionForm({ editId }: { editId?: string }) {
   const router = useRouter();
   const isEdit = !!editId;
+  const { toast } = useToast();
 
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
@@ -112,24 +136,21 @@ export function TransactionForm({ editId }: TransactionFormProps) {
   const [date, setDate] = useState(getTodayISO());
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
-
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Load meta
+  const { confirm, modalProps: confirmModalProps } = useConfirmModal();
+  const { show: showError, modalProps: errorModalProps } = useModal();
+
   useEffect(() => {
     getAllAccounts().then((accs) => {
       setAccounts(accs);
-      if (accs.length > 0 && !accountId) {
-        setAccountId(accs[0].id);
-      }
+      if (accs.length > 0) setAccountId(accs[0].id);
     });
   }, []);
 
-  // Load categories by type
   useEffect(() => {
     if (type === "transfer") {
       setCategories([]);
@@ -142,7 +163,6 @@ export function TransactionForm({ editId }: TransactionFormProps) {
     });
   }, [type]);
 
-  // Load existing transaction for edit
   useEffect(() => {
     if (!editId) return;
     getTransactionById(editId).then((txn) => {
@@ -190,187 +210,184 @@ export function TransactionForm({ editId }: TransactionFormProps) {
 
       if (isEdit && editId) {
         await updateTransaction(editId, txnData);
+        toast("Transaksi berhasil diperbarui", "success");
       } else {
         await addTransaction({
           id: generateId("txn"),
           ...txnData,
           createdAt: new Date().toISOString(),
         });
+        toast("Transaksi berhasil disimpan", "success");
       }
-
       router.push("/");
+    } catch {
+      showError({
+        title: "Gagal Menyimpan",
+        description: "Terjadi kesalahan saat menyimpan transaksi. Silakan coba lagi.",
+        variant: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [type, amount, category, note, date, accountId, toAccountId, isEdit, editId, router]);
+  }, [type, amount, category, note, date, accountId, toAccountId, isEdit, editId, router, toast, showError]);
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(() => {
     if (!editId) return;
-    if (!confirm("Hapus transaksi ini?")) return;
-    setIsDeleting(true);
-    await deleteTransaction(editId);
-    router.push("/history");
-  }, [editId, router]);
+    confirm({
+      title: "Hapus Transaksi?",
+      description: "Tindakan ini tidak bisa dibatalkan. Transaksi akan dihapus permanen.",
+      confirmLabel: "Ya, Hapus",
+      onConfirm: async () => {
+        await deleteTransaction(editId);
+        toast("Transaksi dihapus", "info");
+        router.push("/history");
+      },
+    });
+  }, [editId, confirm, toast, router]);
 
-  // Format amount input with thousand separator
-  const handleAmountChange = (v: string) => {
-    const clean = v.replace(/\D/g, "");
-    setAmount(clean);
-  };
-
-  const displayAmount = amount
-    ? Number(amount).toLocaleString("id-ID")
-    : "";
+  const displayAmount = amount ? Number(amount).toLocaleString("id-ID") : "";
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 0" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: "var(--bg-muted)",
-            border: "1px solid var(--border-strong)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--text-primary)",
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-          }}
-        >
-          ←
-        </button>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-          {isEdit ? "Edit Transaksi" : "Tambah Transaksi"}
-        </h1>
-      </div>
-
-      {/* Type tabs */}
-      <TypeTabs value={type} onChange={setType} />
-
-      {/* Amount */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={labelStyle}>Nominal</label>
-        <div style={{ position: "relative" }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 14, fontWeight: 600 }}>
-            Rp
-          </span>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={displayAmount}
-            onChange={(e) => handleAmountChange(e.target.value)}
-            placeholder="0"
-            style={{ ...inputStyle, paddingLeft: 40, fontSize: 20, fontWeight: 700 }}
-          />
+    <>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              background: "var(--bg-muted)",
+              border: "1px solid var(--border-strong)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--text-primary)",
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+            }}
+          >
+            ←
+          </button>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+            {isEdit ? "Edit Transaksi" : "Tambah Transaksi"}
+          </h1>
         </div>
-        {errors.amount && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>{errors.amount}</p>}
-      </div>
 
-      {/* Category (hidden for transfer) */}
-      {type !== "transfer" && (
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Kategori</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} style={selectStyle}>
-            {categories.map((c) => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-          {errors.category && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>{errors.category}</p>}
-        </div>
-      )}
+        <TypeTabs value={type} onChange={setType} />
 
-      {/* Account */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={labelStyle}>{type === "transfer" ? "Dari Akun" : "Akun"}</label>
-        <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={selectStyle}>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-        {errors.accountId && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>{errors.accountId}</p>}
-      </div>
+        {/* Amount */}
+        <Field label="Nominal" error={errors.amount}>
+          <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 14, fontWeight: 600 }}>
+              Rp
+            </span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={displayAmount}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
+              placeholder="0"
+              style={{ ...inputStyle, paddingLeft: 40, fontSize: 20, fontWeight: 700 }}
+            />
+          </div>
+        </Field>
 
-      {/* To Account (transfer only) */}
-      {type === "transfer" && (
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Ke Akun</label>
-          <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} style={selectStyle}>
-            <option value="">Pilih akun tujuan</option>
-            {accounts.filter((a) => a.id !== accountId).map((a) => (
+        {/* Category */}
+        {type !== "transfer" && (
+          <Field label="Kategori" error={errors.category}>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} style={selectStyle}>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </Field>
+        )}
+
+        {/* Account */}
+        <Field label={type === "transfer" ? "Dari Akun" : "Akun"} error={errors.accountId}>
+          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={selectStyle}>
+            {accounts.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
-          {errors.toAccountId && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>{errors.toAccountId}</p>}
+        </Field>
+
+        {/* To Account */}
+        {type === "transfer" && (
+          <Field label="Ke Akun" error={errors.toAccountId}>
+            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} style={selectStyle}>
+              <option value="">Pilih akun tujuan</option>
+              {accounts.filter((a) => a.id !== accountId).map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </Field>
+        )}
+
+        {/* Date — custom picker */}
+        <div style={{ marginBottom: 16 }}>
+          <SingleDatePicker
+            label="Tanggal"
+            value={date}
+            onChange={setDate}
+            error={errors.date}
+          />
         </div>
-      )}
 
-      {/* Date */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={labelStyle}>Tanggal</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={inputStyle}
-        />
-        {errors.date && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--expense)" }}>{errors.date}</p>}
-      </div>
+        {/* Note */}
+        <Field label="Catatan (opsional)">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Tambahkan catatan..."
+            style={inputStyle}
+          />
+        </Field>
 
-      {/* Note */}
-      <div style={{ marginBottom: 28 }}>
-        <label style={labelStyle}>Catatan (opsional)</label>
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Tambahkan catatan..."
-          style={inputStyle}
-        />
-      </div>
-
-      {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        style={{
-          width: "100%",
-          padding: "16px",
-          background: "var(--accent)",
-          color: "#000",
-          fontSize: 16,
-          fontWeight: 700,
-          borderRadius: "var(--radius-md)",
-          marginBottom: 12,
-          opacity: isSubmitting ? 0.7 : 1,
-          boxShadow: "0 4px 20px rgba(0, 212, 170, 0.3)",
-        }}
-      >
-        {isSubmitting ? "Menyimpan..." : isEdit ? "Simpan Perubahan" : "Simpan Transaksi"}
-      </button>
-
-      {/* Delete */}
-      {isEdit && (
         <button
-          onClick={handleDelete}
-          disabled={isDeleting}
+          onClick={handleSubmit}
+          disabled={isSubmitting}
           style={{
             width: "100%",
-            padding: "14px",
-            background: "var(--expense-bg)",
-            color: "var(--expense)",
-            fontSize: 14,
-            fontWeight: 600,
+            padding: "16px",
+            background: "var(--accent)",
+            color: "#000",
+            fontSize: 16,
+            fontWeight: 700,
             borderRadius: "var(--radius-md)",
-            border: "1px solid rgba(244, 63, 94, 0.2)",
+            marginTop: 8,
+            marginBottom: 12,
+            opacity: isSubmitting ? 0.7 : 1,
+            boxShadow: "0 4px 20px rgba(0, 212, 170, 0.3)",
           }}
         >
-          {isDeleting ? "Menghapus..." : "Hapus Transaksi"}
+          {isSubmitting ? "Menyimpan..." : isEdit ? "Simpan Perubahan" : "Simpan Transaksi"}
         </button>
-      )}
-    </div>
+
+        {isEdit && (
+          <button
+            onClick={handleDelete}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "var(--expense-bg)",
+              color: "var(--expense)",
+              fontSize: 14,
+              fontWeight: 600,
+              borderRadius: "var(--radius-md)",
+              border: "1px solid rgba(244, 63, 94, 0.2)",
+              marginBottom: 24,
+            }}
+          >
+            Hapus Transaksi
+          </button>
+        )}
+      </div>
+
+      {/* Portalled modals */}
+      {confirmModalProps && <Modal {...confirmModalProps} />}
+      {errorModalProps && <Modal {...errorModalProps} />}
+    </>
   );
 }

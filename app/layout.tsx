@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { DBInitializer } from "@/components/layout/DBInitializer";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
   title: "Mayla — Financial Tracker",
@@ -36,9 +37,11 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <DBInitializer />
-        <main>{children}</main>
-        <BottomNav />
+        <ToastProvider>
+          <DBInitializer />
+          <main>{children}</main>
+          <BottomNav />
+        </ToastProvider>
       </body>
     </html>
   );
