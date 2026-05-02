@@ -8,6 +8,8 @@ import {
 } from "@/lib/db/queries";
 import { formatCurrencyCompact } from "@/lib/utils/calculations";
 import { RangeDatePicker, type DateRangeValue } from "@/components/ui/DatePicker";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { Transaction, Category, Account, TransactionFilter } from "@/types";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
@@ -362,60 +364,35 @@ export function HistoryView() {
 
           {/* Category */}
           <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 11,
-                color: "var(--text-muted)",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                marginBottom: 6,
-              }}
-            >
+            <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
               Kategori
             </label>
-            <select
+            <Dropdown
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              style={selectStyle}
-            >
-              <option value="">Semua Kategori</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryFilter}
+              options={categories.map((c) => ({ value: c.name, label: c.name }))}
+              placeholder="Semua Kategori"
+              sheetTitle="Filter Kategori"
+            />
           </div>
 
           {/* Account */}
           <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: 11,
-                color: "var(--text-muted)",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                marginBottom: 6,
-              }}
-            >
+            <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
               Akun
             </label>
-            <select
+            <Dropdown
               value={accountFilter}
-              onChange={(e) => setAccountFilter(e.target.value)}
-              style={selectStyle}
-            >
-              <option value="">Semua Akun</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+              onChange={setAccountFilter}
+              options={accounts.map((a) => ({
+                value: a.id,
+                label: a.name,
+                description: a.type === "main" ? "Akun Utama" : "Tabungan",
+                accentColor: a.type === "main" ? "var(--accent)" : "var(--transfer)",
+              }))}
+              placeholder="Semua Akun"
+              sheetTitle="Filter Akun"
+            />
           </div>
 
           {activeFilterCount > 0 && (
@@ -450,16 +427,23 @@ export function HistoryView() {
           Memuat...
         </div>
       ) : transactions.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px 0",
-            color: "var(--text-muted)",
-          }}
-        >
-          <p style={{ fontSize: 32, margin: "0 0 8px" }}>📭</p>
-          <p style={{ fontSize: 14, margin: 0 }}>Tidak ada transaksi ditemukan</p>
-        </div>
+        keyword || categoryFilter || accountFilter || dateRange.from ? (
+          <EmptyState
+            icon="🔍"
+            title="Tidak ada hasil"
+            description="Coba ubah filter atau kata kunci pencarian."
+            actionLabel="Reset Filter"
+            onAction={clearAllFilters}
+          />
+        ) : (
+          <EmptyState
+            icon="📋"
+            title="Belum ada transaksi"
+            description="Riwayat transaksi akan muncul di sini setelah kamu mencatat pemasukan atau pengeluaran."
+            actionLabel="+ Tambah Transaksi"
+            actionHref="/transaction/add"
+          />
+        )
       ) : (
         <div>
           <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--text-muted)" }}>

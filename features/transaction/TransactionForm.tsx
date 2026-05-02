@@ -17,6 +17,7 @@ import {
 } from "@/lib/utils/calculations";
 import { Modal, useConfirmModal, useModal } from "@/components/ui/Modal";
 import { SingleDatePicker } from "@/components/ui/DatePicker";
+import { Dropdown, type DropdownOption } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
 import type { Account, Category, TransactionType } from "@/types";
 
@@ -294,34 +295,57 @@ export function TransactionForm({ editId }: { editId?: string }) {
 
         {/* Category */}
         {type !== "transfer" && (
-          <Field label="Kategori" error={errors.category}>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} style={selectStyle}>
-              {categories.map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-          </Field>
+          <div style={{ marginBottom: 16 }}>
+            <Dropdown
+              label="Kategori"
+              value={category}
+              onChange={setCategory}
+              options={categories.map((c) => ({ value: c.name, label: c.name }))}
+              placeholder="Pilih kategori"
+              sheetTitle="Pilih Kategori"
+              error={errors.category}
+            />
+          </div>
         )}
 
         {/* Account */}
-        <Field label={type === "transfer" ? "Dari Akun" : "Akun"} error={errors.accountId}>
-          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={selectStyle}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </Field>
+        <div style={{ marginBottom: 16 }}>
+          <Dropdown
+            label={type === "transfer" ? "Dari Akun" : "Akun"}
+            value={accountId}
+            onChange={setAccountId}
+            options={accounts.map((a) => ({
+              value: a.id,
+              label: a.name,
+              description: a.type === "main" ? "Akun Utama" : "Tabungan",
+              accentColor: a.type === "main" ? "var(--accent)" : "var(--transfer)",
+            }))}
+            placeholder="Pilih akun"
+            sheetTitle="Pilih Akun"
+            error={errors.accountId}
+          />
+        </div>
 
         {/* To Account */}
         {type === "transfer" && (
-          <Field label="Ke Akun" error={errors.toAccountId}>
-            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} style={selectStyle}>
-              <option value="">Pilih akun tujuan</option>
-              {accounts.filter((a) => a.id !== accountId).map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </Field>
+          <div style={{ marginBottom: 16 }}>
+            <Dropdown
+              label="Ke Akun"
+              value={toAccountId}
+              onChange={setToAccountId}
+              options={accounts
+                .filter((a) => a.id !== accountId)
+                .map((a) => ({
+                  value: a.id,
+                  label: a.name,
+                  description: a.type === "main" ? "Akun Utama" : "Tabungan",
+                  accentColor: a.type === "main" ? "var(--accent)" : "var(--transfer)",
+                }))}
+              placeholder="Pilih akun tujuan"
+              sheetTitle="Akun Tujuan"
+              error={errors.toAccountId}
+            />
+          </div>
         )}
 
         {/* Date — custom picker */}

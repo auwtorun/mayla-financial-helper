@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  isFAB?: boolean;
-}
+// ── SVG ICONS ────────────────────────────────────────────────
 
 function HomeIcon() {
   return (
@@ -19,11 +14,14 @@ function HomeIcon() {
   );
 }
 
+/** Receipt scroll — "transaction history" */
 function HistoryIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+      <line x1="9" y1="16" x2="13" y2="16" />
     </svg>
   );
 }
@@ -37,32 +35,61 @@ function PlusIcon() {
   );
 }
 
+/** Bank columns — "rekening koran / statement" */
+function StatementIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <line x1="2" y1="9" x2="22" y2="9" />
+      <line x1="8" y1="3" x2="8" y2="9" />
+      <line x1="7" y1="13" x2="10" y2="13" />
+      <line x1="7" y1="17" x2="10" y2="17" />
+      <line x1="14" y1="13" x2="17" y2="13" />
+      <line x1="14" y1="17" x2="17" y2="17" />
+    </svg>
+  );
+}
+
+/** Piggy bank — "tabungan / savings" */
 function SavingsIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a10 10 0 0 1 10 10" />
-      <path d="M12 6v6l4 2" />
-      <circle cx="12" cy="12" r="10" />
+      <path d="M12 3a6 6 0 0 1 6 6v1h1a2 2 0 0 1 0 4h-1v1a6 6 0 0 1-12 0v-1H5a2 2 0 0 1 0-4h1V9a6 6 0 0 1 6-6z" />
+      <circle cx="9.5" cy="9.5" r="0.5" fill="currentColor" />
+      <path d="M14 15a2 2 0 0 1-4 0" />
+      <path d="M12 17v2" />
     </svg>
   );
 }
 
+/** User silhouette — "akun / profile" */
 function AccountIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
     </svg>
   );
 }
 
+// ── NAV CONFIG ────────────────────────────────────────────────
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  isFAB?: boolean;
+}
+
 const navItems: NavItem[] = [
-  { href: "/", label: "Home", icon: <HomeIcon /> },
-  { href: "/history", label: "Riwayat", icon: <HistoryIcon /> },
+  { href: "/",           label: "Home",     icon: <HomeIcon /> },
+  { href: "/history",    label: "Riwayat",  icon: <HistoryIcon /> },
   { href: "/transaction/add", label: "Tambah", icon: <PlusIcon />, isFAB: true },
-  { href: "/savings", label: "Tabungan", icon: <SavingsIcon /> },
-  { href: "/account", label: "Akun", icon: <AccountIcon /> },
+  { href: "/statement",  label: "Rekening", icon: <StatementIcon /> },
+  { href: "/account",    label: "Akun",     icon: <AccountIcon /> },
 ];
+
+// ── COMPONENT ─────────────────────────────────────────────────
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -87,7 +114,9 @@ export function BottomNav() {
       }}
     >
       {navItems.map((item) => {
-        const isActive = item.isFAB ? false : pathname === item.href;
+        const isActive = item.isFAB
+          ? false
+          : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
 
         if (item.isFAB) {
           return (
@@ -124,13 +153,30 @@ export function BottomNav() {
               flexDirection: "column",
               alignItems: "center",
               gap: 4,
-              padding: "6px 12px",
+              padding: "6px 10px",
               color: isActive ? "var(--accent)" : "var(--text-muted)",
               textDecoration: "none",
               flex: 1,
               transition: "color 0.15s",
+              position: "relative",
             }}
           >
+            {/* Active indicator dot */}
+            {isActive && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 20,
+                  height: 2,
+                  background: "var(--accent)",
+                  borderRadius: "0 0 2px 2px",
+                }}
+              />
+            )}
             <span>{item.icon}</span>
             <span
               style={{
