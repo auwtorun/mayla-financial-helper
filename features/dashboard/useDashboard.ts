@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getAllAccounts } from "@/lib/db/queries";
-import { getRecentTransactions, getTransactionsByMonth } from "@/lib/db/queries";
+import {
+  getAllAccounts,
+  getRecentTransactions,
+  getTransactionsByMonth,
+  getFilteredTransactions,
+  getUserSettings,
+} from "@/lib/db/queries";
 import {
   calculateAccountBalance,
   calculateTotalBalance,
@@ -15,6 +20,7 @@ interface DashboardData {
   totalBalance: number;
   monthlySummary: MonthlySummary;
   recentTransactions: Transaction[];
+  userName: string;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -29,6 +35,7 @@ export function useDashboard(): DashboardData {
     netFlow: 0,
   });
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [userName, setUserName] = useState("Sayang💗");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,15 +45,14 @@ export function useDashboard(): DashboardData {
     try {
       const now = new Date();
 
-      const [rawAccounts, recent, monthly] = await Promise.all([
+      const [rawAccounts, recent, monthly, settings] = await Promise.all([
         getAllAccounts(),
         getRecentTransactions(5),
         getTransactionsByMonth(now.getFullYear(), now.getMonth()),
+        getUserSettings(),
       ]);
 
-      // We need ALL transactions to compute balance correctly (transfers cross accounts)
-      // For a large dataset, this would be paginated; for MVP this is fine.
-      const { getFilteredTransactions } = await import("@/lib/db/queries");
+      // All txns needed for accurate cross-account balance
       const allTxns = await getFilteredTransactions({}, 10000);
 
       const accountsWithBalance = rawAccounts.map((acc) => ({
@@ -58,8 +64,10 @@ export function useDashboard(): DashboardData {
       setTotalBalance(calculateTotalBalance(rawAccounts, allTxns));
       setMonthlySummary(calculateMonthlySummary(monthly));
       setRecentTransactions(recent);
+      // Use saved name or fallback to "Sayang💗"
+      setUserName(settings.name && settings.name !== "Pengguna" ? settings.name : "Sayang💗");
     } catch (err) {
-      setError("Gagal memuat data. Coba refresh.");
+      setError("Gagal memuat data.");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -75,6 +83,7 @@ export function useDashboard(): DashboardData {
     totalBalance,
     monthlySummary,
     recentTransactions,
+    userName,
     isLoading,
     error,
     refresh: load,

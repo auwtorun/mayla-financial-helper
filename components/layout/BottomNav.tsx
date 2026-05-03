@@ -93,6 +93,7 @@ const navItems: NavItem[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  if (pathname === "/intro") return null;
 
   return (
     <nav
